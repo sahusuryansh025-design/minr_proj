@@ -7,7 +7,7 @@ import os
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from datetime import datetime
-import streamlit as st
+
 st.write("App started - debugging mode")
 
 # ==============================================================
@@ -386,9 +386,9 @@ class HybridLandslideDetectionSystem:
         ml_risk = float(ml_prediction)
 
         weights = {
-            'ml': 0.80,
-            'video': 0.10,
-            'animal': 0.10
+            'ml': 0.73,
+            'video': 0.18,
+            'animal': 0.09
         }
 
         risks = {'ml': ml_risk}
@@ -444,39 +444,50 @@ def main():
         layout="wide"
     )
 
-    st.title("🌋 Hybrid Landslide Detection System")
+    st.title("🌋 Hybrid Landslide Risk  Prediction  System")
     st.markdown("""
 This app combines:
 - **ML Model (Environmental parameters)**  
-- **Ground Video Analysis** (cracks, movement, deformation)  
-- **Animal Behavior Analysis** from video  
+- **Ground Video Analysis**  
+- **Animal Behavior Analysis**  
 
-👉 If you **don't upload any videos**, the system will fall back to **ML-only prediction**.
+👉 If  **no video is uploaded**, then the system uses **ML-only prediction**.
     """)
 
-    # Train / load ML model
+    # ---------------------------
+    # Load ML Model
+    # ---------------------------
     with st.spinner("Loading ML model..."):
         model_ml = train_ml_model()
     hybrid_system = HybridLandslideDetectionSystem(model_ml)
 
     # ----------------------------------------------------------
-    # Sidebar: Environmental Inputs
+    # TOP PANEL: Environmental Inputs (NO SIDEBAR, NO IMAGES)
     # ----------------------------------------------------------
-    st.sidebar.header("🌱 Environmental Parameters")
+    st.subheader("🌱 Environmental Parameters")
 
-    slope = st.sidebar.slider("Slope (degrees)", 0.0, 60.0, 35.0)
-    elevation = st.sidebar.slider("Elevation (m)", 50.0, 2500.0, 1200.0)
-    rainfall = st.sidebar.slider("Rainfall (mm)", 10.0, 350.0, 180.0)
-    soil_moisture = st.sidebar.slider("Soil Moisture (0–1)", 0.1, 1.0, 0.6)
-    ndvi = st.sidebar.slider("NDVI (-0.2–0.9)", -0.2, 0.9, 0.3)
-    distance_to_road = st.sidebar.slider("Distance to Road (km)", 0.0, 5.0, 1.5)
-    terrain_roughness = st.sidebar.slider("Terrain Roughness", 0.0, 1000.0, 500.0)
-    soil_type = st.sidebar.selectbox("Soil Type (1–4)", [1, 2, 3, 4], index=1)
-    groundwater_level = st.sidebar.slider("Groundwater Level (m)", 0.0, 50.0, 20.0)
-    precipitation_intensity = st.sidebar.slider("Precipitation Intensity", 0.0, 100.0, 50.0)
-    slope_aspect = st.sidebar.slider("Slope Aspect (degrees)", 0.0, 360.0, 180.0)
-    seismic_activity = st.sidebar.slider("Seismic Activity (0–7)", 0.0, 7.0, 3.0)
+    with st.expander("Click to set Environmental Parameters", expanded=True):
+        col1, col2, col3 = st.columns(3)
 
+        with col1:
+            slope = st.slider("Slope (degrees)", 0.0, 60.0, 35.0)
+            elevation = st.slider("Elevation (m)", 50.0, 2500.0, 1200.0)
+            rainfall = st.slider("Rainfall (mm)", 10.0, 350.0, 180.0)
+            precipitation_intensity = st.slider("Precipitation Intensity", 0.0, 100.0, 50.0)
+
+        with col2:
+            soil_moisture = st.slider("Soil Moisture (0–1)", 0.1, 1.0, 0.6)
+            ndvi = st.slider("NDVI (-0.2 – 0.9)", -0.2, 0.9, 0.3)
+            distance_to_road = st.slider("Distance to Road (km)", 0.0, 5.0, 1.5)
+            seismic_activity = st.slider("Seismic Activity (0–7)", 0.0, 7.0, 3.0)
+
+        with col3:
+            terrain_roughness = st.slider("Terrain Roughness", 0.0, 1000.0, 500.0)
+            soil_type = st.selectbox("Soil Type (1–4)", [1, 2, 3, 4], index=1)
+            groundwater_level = st.slider("Groundwater Level (m)", 0.0, 50.0, 20.0)
+            slope_aspect = st.slider("Slope Aspect (degrees)", 0.0, 360.0, 180.0)
+            
+    # Collect environmental data
     environmental_data = {
         'slope': slope,
         'elevation': elevation,
@@ -493,54 +504,45 @@ This app combines:
     }
 
     # ----------------------------------------------------------
-    # Video Upload Section
+    # VIDEO UPLOAD SECTION
     # ----------------------------------------------------------
     st.subheader("📹 Video Inputs (Optional)")
 
-    col1, col2 = st.columns(2)
+    col1_v, col2_v = st.columns(2)
 
-    with col1:
+    with col1_v:
         st.markdown("**Ground / Slope / Road CCTV Video**")
-        ground_video = st.file_uploader(
-            "Upload ground video (mp4, avi, mov)", type=["mp4", "avi", "mov"],
-            key="ground"
-        )
-        if ground_video is not None:
+        ground_video = st.file_uploader("Upload ground video", type=["mp4", "avi", "mov"])
+        if ground_video:
             st.video(ground_video)
 
-    with col2:
+    with col2_v:
         st.markdown("**Animal Area Video**")
-        animal_video = st.file_uploader(
-            "Upload animal video (mp4, avi, mov)", type=["mp4", "avi", "mov"],
-            key="animal"
-        )
+        animal_video = st.file_uploader("Upload animal video", type=["mp4", "avi", "mov"])
         animal_type = st.selectbox("Animal Type", ["cattle", "dogs", "birds"])
-        if animal_video is not None:
+        if animal_video:
             st.video(animal_video)
 
     # ----------------------------------------------------------
-    # Run Analysis Button
+    # RUN ANALYSIS BUTTON
     # ----------------------------------------------------------
     if st.button("🚀 Run Landslide Risk Analysis"):
         with st.spinner("Analyzing environmental data and videos..."):
 
-            # 1. Ground video analysis (optional)
+            # Ground video analysis
             video_risk = None
             video_summary = None
-            if ground_video is not None:
+            if ground_video:
                 video_risk, video_summary = analyze_ground_video(ground_video)
-            
-            # 2. Animal video analysis (optional)
+
+            # Animal video analysis
             animal_risk = None
             animal_summary = None
             behavior_alert = "NO ANIMAL DATA"
-            if animal_video is not None:
-                animal_risk, behavior_alert, animal_summary = analyze_animal_video(
-                    animal_video,
-                    animal_type=animal_type
-                )
+            if animal_video:
+                animal_risk, behavior_alert, animal_summary = analyze_animal_video(animal_video, animal_type)
 
-            # 3. Hybrid prediction
+            # Hybrid prediction
             result = hybrid_system.predict_combined(
                 environmental_data,
                 video_risk=video_risk,
@@ -549,43 +551,37 @@ This app combines:
             )
 
         # ------------------------------------------------------
-        # Display Results
+        # DISPLAY RESULTS
         # ------------------------------------------------------
         st.success("✅ Analysis complete!")
 
         st.subheader("🧠 Combined Risk Assessment")
-        col_a, col_b = st.columns(2)
+        colA, colB = st.columns(2)
 
-        with col_a:
+        with colA:
             st.metric("ML Environmental Risk", f"{result['ml_risk']:.2f}")
-            st.metric("Video Risk", "N/A" if result['video_risk'] is None else f"{result['video_risk']:.2f}")
-            st.metric("Animal Risk", "N/A" if result['animal_risk'] is None else f"{result['animal_risk']:.2f}")
+            st.metric("Video Risk", "N/A" if not result['video_risk'] else f"{result['video_risk']:.2f}")
+            st.metric("Animal Risk", "N/A" if not result['animal_risk'] else f"{result['animal_risk']:.2f}")
 
-        with col_b:
+        with colB:
             st.metric("Combined Risk Score", f"{result['combined_risk']:.2f}")
             st.metric("Alert Level", result['alert_level'])
             st.metric("System Confidence", f"{result['confidence']:.2f}")
 
-        st.markdown(f"**Recommendation:** {result['recommendation']}")
-        st.markdown(f"**Behavior Alert:** {result['behavior_alert']}")
-        st.markdown(f"**Timestamp:** {result['timestamp']}")
+        st.write(f"**Recommendation:** {result['recommendation']}")
+        st.write(f"**Behavior Alert:** {result['behavior_alert']}")
+        st.write(f"**Timestamp:** {result['timestamp']}")
 
-        # Ground video summary
-        if video_summary is not None:
-            st.subheader("📊 Ground Video Analysis Summary")
+        # Extra details
+        if video_summary:
+            st.subheader("📊 Ground Video Summary")
             st.json(video_summary)
-        else:
-            st.info("ℹ️ No ground video provided – using only ML + animal (if available).")
-
-        # Animal video summary
-        if animal_summary is not None:
-            st.subheader("🐄 Animal Behavior Analysis Summary")
+        if animal_summary:
+            st.subheader("🐄 Animal Behavior Summary")
             st.json(animal_summary)
-        else:
-            st.info("ℹ️ No animal video provided – using only ML + ground video (if available).")
 
     else:
-        st.info("ℹ️ Set environmental parameters, optionally upload videos, then click **Run Landslide Risk Analysis**.")
+        st.info("ℹ️ Set environmental parameters, upload videos (optional), then click **Run Landslide Risk Analysis**.")
 
 
 if __name__ == "__main__":
